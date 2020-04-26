@@ -1,0 +1,37 @@
+#!/bin/bash
+
+#SBATCH -J packingtest-ls5
+#SBATCH -A A-ccsc
+#SBATCH -o packingtest-ls5.o%j
+#SBATCH -e packingtest-ls5.o%j
+#SBATCH -n 2
+#SBATCH -N 2
+#SBATCH -p normal
+#SBATCH -t 02:00:00
+#SBATCH --mail-user=eijkhout@tacc.utexas.edu
+#SBATCH --mail-type=end
+
+if [ ! -f "packperf.ls5" ] ; then 
+   echo "Please build your program <<packperf.ls5>> first"
+   exit 1
+fi
+export MPICH_GNI_MAX_EAGER_MSG_SIZE=256
+echo "Measuring packing performance on staff"
+echo "with loaded modules"
+module list
+
+n=8
+while [ $n -lt 150000000 ] ; do
+
+  # exact power of 2
+  echo "Sending $n words"
+  ibrun ./packperf.ls5 $n
+
+  # in between points
+  m=$(( 3*n/2 ))
+  echo "Sending $m words"
+  ibrun ./packperf.ls5 $m
+
+  n=$(( 2*n ))
+done
+echo "All tests on staff completed"

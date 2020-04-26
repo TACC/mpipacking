@@ -1,0 +1,38 @@
+#!/bin/bash
+
+#SBATCH -J packingtest
+#SBATCH -A A-ccsc
+#SBATCH -o packingtest.o%j
+#SBATCH -n 2
+#SBATCH -N 2
+#SBATCH -p skx-normal
+#SBATCH -t 02:00:00
+#SBATCH --mail-user=eijkhout@tacc.utexas.edu
+#SBATCH --mail-type=end
+
+echo "Measuring packing performance on `hostname -a`"
+echo "with loaded modules"
+module list
+
+set -x
+
+n=8
+HOSTS=`scontrol show hostname $SLURM_NODELIST | awk 'BEGIN {s=0} s==1 {h=h "," $1 } s==0 {h=$1; s==1} '`
+IMPIDIR=/scratch/00434/eijkhout/intel19/compilers_and_libraries/linux/mpi/intel64/bin
+IBRUN=${IMPIDIR}/mpirun 
+### -np 2 -hosts ${HOSTS}"
+
+while [ $n -lt 150000000 ] ; do
+
+  # exact power of 2
+  echo "Sending $n words"
+  ${IBRUN} ./packperf $n
+
+  # in between points
+  m=$(( 3*n/2 ))
+  echo "Sending $m words"
+  ${IBRUN} ./packperf $m
+
+  n=$(( 2*n ))
+done
+echo "All tests on `hostname -a` completed"

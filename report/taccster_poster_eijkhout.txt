@@ -1,0 +1,12 @@
+Performance of non-contiguous MPI sends
+
+Victor Eijkhout
+Texas Advanced Computing Center
+The University of Texas at Austin
+
+The Message Passing Interface (MPI) has `derived datatypes' routines
+for sending non-contiguous data. While these offer an elegant
+alternative to explicitly packing a contiguous send buffer, there is
+always the question of whether they come with a performance
+penalty. We present half a dozen different strategies, on various TACC
+platforms, showing some surprising winners and losers.

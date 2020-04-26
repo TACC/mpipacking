@@ -1,0 +1,75 @@
+% -*- latex -*-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%
+%%%% This text file is part of a package of parallel performance studies
+%%%% by Victor Eijkhout, copyright 2018-2020
+%%%%
+%%%% packing.tex : report on MPI performance of non-contiguous sends
+%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass[conference]{IEEEtran}
+
+\usepackage{graphicx,pslatex}
+\usepackage{hyperref}
+
+\input scimacs
+
+\usepackage{geometry}
+\addtolength{\textwidth}{.5in}
+\addtolength{\textheight}{.5in}
+\addtolength{\evensidemargin}{-.5in}
+
+\usepackage{comment}
+\includecomment{details}
+\excludecomment{p9}
+
+\begin{document}
+\title{Performance of MPI Sends\\ of Non-Contiguous Data}
+\author{Victor Eijkhout}
+\date{2020}
+\maketitle
+
+\begin{abstract}
+  We present an experimental investigation of the performance of MPI
+  derived datatypes. While solutions with hardware support can achieve
+  high performance, we show that vanilla approaches fall short.
+  For messages up to the megabyte range most
+  schemes perform comparably to each other and to manual copying into
+  a regular send buffer. However, for large messages the internal
+  buffering of MPI causes marked differences in efficiency.
+  We show how schemes that acknowledge the importance
+  of buffer management
+  give both the highest performance and a simple usage.
+\end{abstract}
+
+\input report-body
+
+\paragraph*{\bf Acknowledgement} The author wishes to thank Hari
+Subramoni for an enlightening discussion on the internals of MPI.
+
+\newpage
+
+\bibliographystyle{plain}
+\bibliography{vle}
+
+\end{document}
+
+\begin{verbatim}
+int MPIDI_CH3_PktHandler_RndvClrToSend( MPIDI_VC_t *vc,
+  MPIDI_CH3_Pkt_t *pkt, void *data ATTRIBUTE((unused)),
+  MPIDI_msg_sz_t *buflen,MPID_Request **rreqp )
+// case non-contiguous send:
+    mpi_errno = vc->sendNoncontig_fn(vc, sreq, rs_pkt,sizeof(*rs_pkt));
+
+int MPID_nem_ofi_SendNoncontig(MPIDI_VC_t * vc,
+    MPID_Request * sreq, void *hdr,MPIDI_msg_sz_t hdr_sz)
+  // there is a bunch more SendNoncontig routines
+  pack_buffer = MPIU_Malloc(pkt_len);
+  MPID_Segment_pack(sreq->dev.segment_ptr, first, &last,
+    pack_buffer + buf_offset);
+  START_COMM();
+  MPID_nem_ofi_poll(MPID_NONBLOCKING_POLL);
+\end{verbatim}

@@ -1,0 +1,7 @@
+  Every ping-pong was timed individually. We used \n{MPI_Wtime}, which
+  on our platforms had a resolution of $1\cdot10^{-6}$ seconds, and the
+  minimum measurement ever (for the very smallest message) was around
+  $6\cdot10^{-6}$ seconds.
+  %
+  Our code is set up to dismiss measurements that are more
+  than one standard deviation from the average.

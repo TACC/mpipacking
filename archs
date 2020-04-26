@@ -1,0 +1,7 @@
+stampede2-impi-knl Stampede2,_Knighs_Landing,_Omnipath,_Intel_MPI
+stampede2-impi-skx Stampede2,_Skylake,_Omnipath,_Intel_MPI
+ls5-cray_mpich Cray_XC40,_Haswell,_Cray_mpich
+frontera-impi Frontera,_Cascade_Lake,_Infiniband,_Intel_MPI
+frontera-mvapich2 Frontera,_Cascade_Lake,_Infiniband,_mvapich2
+longhorn-spectrum_mpi Power9,Spectrum MPI
+

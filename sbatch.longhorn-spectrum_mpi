@@ -1,0 +1,40 @@
+#!/bin/bash
+
+#SBATCH -J packingtest-longhorn-spectrum_mpi
+#SBATCH -A A-ccsc
+#SBATCH -o packingtest-longhorn-spectrum_mpi.o%j
+#SBATCH -e packingtest-longhorn-spectrum_mpi.o%j
+#SBATCH -n 2
+#SBATCH -N 2
+#SBATCH -p v100
+#SBATCH -t 00:20:00
+#SBATCH --mail-user=eijkhout@tacc.utexas.edu
+#SBATCH --mail-type=end
+
+if [ ! -f "packperf.longhorn-spectrum_mpi" ] ; then 
+   echo "Please build your program <<packperf.longhorn-spectrum_mpi>> first"
+   exit 1
+fi
+export OMPI_MCA_common_pami_remote_umr_limit=0
+ompi_info --param all all
+date
+echo "Job: ${SLURM_JOBID}, running on $SLURM_NODELIST"
+echo "Measuring packing performance on staff.longhorn.tacc.utexas.edu"
+echo "with loaded modules"
+module list
+
+n=8
+while [ $n -lt 150000000 ] ; do
+
+  # exact power of 2
+  echo "Sending $n words"
+  mpiexec -mca common_pami_use_umr 0 -n 2 ./packperf.longhorn-spectrum_mpi $n
+
+  # in between points
+  m=$(( 3*n/2 ))
+  echo "Sending $m words"
+  mpiexec -mca common_pami_use_umr 0 -n 2 ./packperf.longhorn-spectrum_mpi $m
+
+  n=$(( 2*n ))
+done
+echo "All tests on staff completed"

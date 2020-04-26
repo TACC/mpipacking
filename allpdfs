@@ -1,0 +1,27 @@
+#!/bin/bash
+
+export PYTHON=python3
+
+while [ $# -gt 0 ] ; do
+    if [ "$1" = "-h" ] ; then
+	echo "Usage: $0 [ -h ] [ -p pythonname ]"
+	return 1;
+    fi
+    if [ "$1" = "-p" ] ; then
+	shift
+	if [ $# -eq 0 ] ; then
+	    echo "Usage: $0 [ -h ] [ -p pythonname ]"
+	    return 1;
+	else
+	    export PYTHON="$1"
+	    shift
+	fi
+    fi
+done
+
+cd run_timings
+for p in out.* ; do
+    echo "Generating graph for $p"
+    ${PYTHON} ../packplot.py -s $p
+done
+echo ".. done"

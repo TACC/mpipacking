@@ -1,0 +1,59 @@
+% -*- latex -*-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%
+%%%% This text file is part of a package of parallel performance studies
+%%%% by Victor Eijkhout, copyright 2018
+%%%%
+%%%% packing.tex : report on MPI performance of non-contiguous sends
+%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%\documentclass[11pt]{artikel3}
+\documentclass[AMA,STIX1COL]{WileyNJD-v2}
+
+\usepackage{graphicx}
+\usepackage{hyperref}
+
+\input wilmacs
+
+\title{Performance of MPI sends of non-contiguous data}
+\author[1]{Victor Eijkhout}
+%\date{2018}
+
+\begin{document}
+
+\abstract[summary]{We present an experimental investigation of the performance of MPI
+  derived datatypes. For messages up to the megabyte range most
+  schemes perform comparably to each other and to manual copying into
+  a regular send buffer. However, for large messages the internal
+  buffering of MPI causes differences in efficiency. The optimal
+  scheme is a combination of packing and derived types.}
+
+\tracingmacros=2
+\maketitle
+
+\input report-body
+
+\bibliographystyle{plain}
+\bibliography{vle}
+
+\end{document}
+
+\begin{verbatim}
+int MPIDI_CH3_PktHandler_RndvClrToSend( MPIDI_VC_t *vc,
+  MPIDI_CH3_Pkt_t *pkt, void *data ATTRIBUTE((unused)),
+  MPIDI_msg_sz_t *buflen,MPID_Request **rreqp )
+// case non-contiguous send:
+    mpi_errno = vc->sendNoncontig_fn(vc, sreq, rs_pkt,sizeof(*rs_pkt));
+
+int MPID_nem_ofi_SendNoncontig(MPIDI_VC_t * vc,
+    MPID_Request * sreq, void *hdr,MPIDI_msg_sz_t hdr_sz)
+  // there is a bunch more SendNoncontig routines
+  pack_buffer = MPIU_Malloc(pkt_len);
+  MPID_Segment_pack(sreq->dev.segment_ptr, first, &last,
+    pack_buffer + buf_offset);
+  START_COMM();
+  MPID_nem_ofi_poll(MPID_NONBLOCKING_POLL);
+\end{verbatim}

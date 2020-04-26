@@ -1,0 +1,17 @@
+Source file:
+    packperf.c
+
+Purpose:
+send strided data between two processes using different strategies
+
+Usage:
+"make packperf" builds the executable.
+"make sbatch" generates a slurm file sbatch.<yourhostname> Submit this to run in parallel.
+
+Analysis:
+"make out" saves your slurm output to the timings directory
+"make plot" analyzes the output and generates pdf files.
+(alternatively run:
+python packplot.py [ -s ] yourjoboutput
+to generate a visualization. The "-s" flag saves as pdf file.
+)

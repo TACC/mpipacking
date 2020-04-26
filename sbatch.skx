@@ -1,0 +1,32 @@
+#!/bin/bash
+
+#SBATCH -J packingtest
+#SBATCH -A A-ccsc
+#SBATCH -o packingtest.o%j
+#SBATCH -n 2
+#SBATCH -N 2
+#SBATCH -p skx-dev
+#SBATCH -t 01:00:00
+#SBATCH --mail-user=eijkhout@tacc.utexas.edu
+#SBATCH --mail-type=end
+
+echo "Measuring packing performance on `hostname -a`"
+echo "with loaded modules"
+module list
+
+#export I MPI EAGER THRESHOLD=100000000
+n=8
+while [ $n -lt 150000000 ] ; do
+
+  # exact power of 2
+  echo "Sending $n words"
+  ibrun ./packperf $n
+
+  # in between points
+  m=$(( 3*n/2 ))
+  echo "Sending $m words"
+  ibrun ./packperf $m
+
+  n=$(( 2*n ))
+done
+echo "All tests on `hostname -a` completed"
