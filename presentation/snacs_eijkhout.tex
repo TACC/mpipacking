@@ -1,0 +1,218 @@
+% -*- latex -*-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%
+%%%% This text file is part of the source of 
+%%%% `Parallel Computing'
+%%%% by Victor Eijkhout, copyright 2012-2020
+%%%%
+%%%% mpi_course.tex : master file for an MPI course
+%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass[11pt,headernav]{beamer}
+
+\beamertemplatenavigationsymbolsempty
+\usetheme{Madrid}%{Montpellier}
+\usecolortheme{seahorse}
+\setcounter{tocdepth}{1}
+%% \AtBeginSection[]
+%% {
+%%   \begin{frame}
+%%     \frametitle{Table of Contents}
+%%     \tableofcontents[currentsection]
+%%   \end{frame}
+%% }
+
+\setbeamertemplate{footline}{\hskip1em MPI derived types\hfill
+  \hbox to 0in {\hss \includegraphics[scale=.1]{tacclogonew}}%
+  \hbox to 0in {\hss \arabic{page}\hskip 1in}}
+
+\usepackage{multicol,multirow}
+% custom arrays and tables
+\usepackage{array} %,multirow,multicol}
+\newcolumntype{R}{>{\hbox to 1.2em\bgroup\hss}{r}<{\egroup}}
+\newcolumntype{T}{>{\hbox to 8em\bgroup}{c}<{\hss\egroup}}
+
+\input slidemacs
+\input coursemacs
+\input listingmacs
+
+\def\Location{}% redefine in the inex file
+\def\Location{IPDPS / SNACS 2020}
+\def\TitleExtra{}
+
+\includecomment{full}
+\excludecomment{condensed}
+\excludecomment{online}
+
+\specialcomment{tacc}{\stepcounter{tacc}\def\CommentCutFile{tacc\arabic{tacc}.cut}}{}
+\newcounter{tacc}
+%\excludecomment{tacc}
+\includecomment{xsede}
+
+\includecomment{onesided}
+\includecomment{advanced}
+\includecomment{foundations}
+
+%%%%
+%%%% save slides for separate MPI-3 lecture
+%%%%
+\newcounter{mpithree}
+\specialcomment{mpithree}{
+  \stepcounter{mpithree}
+  \def\CommentCutFile{mpithree\arabic{mpithree}.cut}
+  }{}
+
+
+%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%% Document
+%%%%%%%%%%%%%%%%
+
+\begin{document}
+\parskip=10pt plus 5pt minus 3pt
+
+\title{Performance of MPI Sends\\ of Non-Contiguous Data}
+\author{Victor Eijkhout {\tt eijkhout@tacc.utexas.edu}}
+\date{\Location}
+
+\begin{frame}
+  \titlepage
+\end{frame}
+
+\begin{frame}{Question}
+  MPI derived data types are very convenient;\\
+  do they carry a performance penalty?
+\end{frame}
+
+\begin{frame}[containsverbatim]{What are MPI derived types, and why}
+  MPI send buffers are contiguous and single datatype;\\
+  derived types describe non-contiguous or heterogeneous data
+
+  Convenience:\\
+  defining and using a derived type is much easier than\\
+  allocate buffer, copy data, send, deallocate
+\begin{lstlisting}
+MPI_Datatype newtype;    
+MPI_Type_something( .... description ... &newtype  );
+MPI_Type_commit( newtype );
+MPI_Send( buffer, 1, newtype, dest,tag,comm );
+MPI_Type_free(&newtype);
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[containsverbatim]{Simple case}
+  Send strided data;
+\begin{lstlisting}
+float memory[2*N],buffer[N];
+for (int i=0; i<N; i++)
+  buffer[i] = memory[2*i];
+MPI_Send( buffer,N,MPI_FLOAT, dest,tag,comm );
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[containsverbatim]{Simple performance model}
+Sending $N$ words means
+\begin{itemize}
+\item read from memory to buffer;
+\item send buffer, probably overlapped with read
+\end{itemize}
+$\Rightarrow$ time $O(N)$.
+
+Strided data:
+\begin{itemize}
+\item Read $2N$ from memory;
+\item write back, probably overlapped;
+\item Read $N$ from memory to buffer,
+\item send buffer, probably overlapped
+\end{itemize}
+$\Rightarrow$ time $O(3N)$.
+
+  Expectation: strided send $1/3$ performance of contiguous send.
+\end{frame}
+
+\begin{frame}[containsverbatim]{Can we go faster than $1/3$ peak?}
+  Yes, but only with hardware support for direct streaming from
+  non-contiguous locations.
+
+  \begin{quotation}
+    \textsl M.~Li, H.~Subramoni, K.~Hamidouche, X.~Lu, and
+    D.~K. Panda.  High performance mpi datatype support with user-mode
+    memory registration: Challenges, designs, and benefits.  In {\em
+      2015 IEEE International Conference on Cluster Computing}, pages
+    226--235, Sept 2015.
+  \end{quotation}
+\end{frame}
+
+\begin{frame}[containsverbatim]{Why would performance be lower than $1/3$ peak?}
+  \begin{itemize}
+  \item Construction of the datatype
+  \item Index calculation overhead during copy
+  \end{itemize}
+but in practice mostly:
+\begin{itemize}
+\item allocation of internal MPI buffers.
+\end{itemize}
+Big problem: an application can allocate a buffer and reuse,\\
+but MPI needs to allocate, free, re-allocate, free, re-re-allocate,\ldots
+\end{frame}
+
+\begin{frame}[containsverbatim]{Simple use of derived types}
+  Type vector and type subarray:\\
+  same performance, so probably no overhead in index calculations.\\
+  lower than $1/3$ performance: internal buffer allocation
+\end{frame}
+
+\begin{frame}[containsverbatim]{Force MPI to maintain a buffer}
+  \begin{itemize}
+  \item Buffered sends: $1/3$ performance as predicted
+  \item Persistend sends: lower performance, reason unclear.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[containsverbatim]{One-sided communication}
+  Could have the same performance as other non-buffer schemes.
+
+  In practice:\\
+  much worse performance for small messages (overhead),\\
+  sometimes for large messages (reason unclear)
+\end{frame}
+
+\begin{frame}[containsverbatim]{Packing}
+  Use \indexmpishow{MPI_Pack} to copy elements:\\
+  one function call per element, so very slow
+
+  Pack one derived data:\\
+  in practice attains $1/3$ peak performance\\
+  because reused buffer in user space.
+\end{frame}
+
+\begin{frame}[containsverbatim]{Findings}
+  \begin{itemize}
+  \item Performance often as expected; lower than hardware peak by $1/3$
+  \item Disappointments: persistend sends and one-sided performed
+    worse than expected.\\
+    Exception: one-sided on the new Intel UCX layer seems improved.
+  \item The processor is important next to the network:\\
+    Stampede2 has Knights Landing and Skylake processors on the same network\\
+    The lower scalar performance of KNL is especially noticable on small messages.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[containsverbatim]{Recommendations}
+  \begin{itemize}
+  \item Use buffered sends if the calculation of buffer space is
+    doable and not excessive.\\
+    (Note: total space of \textsl{all} simultaneously
+    outstanding \indexmpishow{MPI_Bsend} calls.)
+  \item Otherwise pack derived type.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[containsverbatim]{Repository of code and results}
+  \url{https://github.com/TACC/mpipacking}
+\end{frame}
+
+\end{document}
+
